@@ -26,30 +26,24 @@ def register_view(request):
     <!DOCTYPE html>
     <html lang="uz">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Ro'yxatdan o'tish</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            body { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-            .card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: none; }
-        </style>
+        <style>body { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }</style>
     </head>
     <body>
-        <div class="card p-5 shadow" style="width: 420px;">
+        <div class="card p-5" style="width: 420px; background: rgba(255,255,255,0.1);">
             <h2 class="text-center mb-4">Ro'yxatdan o'tish</h2>
             <form method="post">
-                <div class="mb-3"><input name="username" class="form-control" placeholder="Username" required></div>
-                <div class="mb-3"><input name="password" type="password" class="form-control" placeholder="Parol" required></div>
-                <div class="mb-3">
-                    <select name="role" class="form-select">
-                        <option value="student">Talaba</option>
-                        <option value="teacher">O'qituvchi</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 py-2">Ro'yxatdan o'tish</button>
+                <input name="username" class="form-control mb-3" placeholder="Username" required>
+                <input name="password" type="password" class="form-control mb-3" placeholder="Parol" required>
+                <select name="role" class="form-select mb-3">
+                    <option value="student">Talaba</option>
+                    <option value="teacher">O'qituvchi</option>
+                </select>
+                <button type="submit" class="btn btn-primary w-100">Ro'yxatdan o'tish</button>
             </form>
-            <p class="text-center mt-3"><a href="/login/" class="text-info">Allaqachon akkaunt bormi? Kirish</a></p>
+            <p class="text-center mt-3"><a href="/login/" class="text-info">Kirish</a></p>
         </div>
     </body>
     </html>
@@ -72,22 +66,18 @@ def login_view(request):
     <!DOCTYPE html>
     <html lang="uz">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Kirish</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            body { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-            .card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: none; }
-        </style>
+        <style>body { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }</style>
     </head>
     <body>
-        <div class="card p-5 shadow" style="width: 420px;">
+        <div class="card p-5" style="width: 420px; background: rgba(255,255,255,0.1);">
             <h2 class="text-center mb-4">Tizimga kirish</h2>
             <form method="post">
-                <div class="mb-3"><input name="username" class="form-control" placeholder="Username" required></div>
-                <div class="mb-3"><input name="password" type="password" class="form-control" placeholder="Parol" required></div>
-                <button type="submit" class="btn btn-success w-100 py-2">Kirish</button>
+                <input name="username" class="form-control mb-3" placeholder="Username" required>
+                <input name="password" type="password" class="form-control mb-3" placeholder="Parol" required>
+                <button type="submit" class="btn btn-success w-100">Kirish</button>
             </form>
             <p class="text-center mt-3"><a href="/register/" class="text-info">Ro'yxatdan o'tish</a></p>
         </div>
@@ -96,31 +86,43 @@ def login_view(request):
     """)
 
 
-# ===================== TEST TOPSHIRISH (Zamonaviy) =====================
+# ===================== TALABA - TEST TOPSHIRISH (Asosiy imtihon bo'limi) =====================
 @csrf_exempt
 @login_required
 def take_test(request):
     test = Test.objects.last()
     if not test:
-        return HttpResponse("<h2 class='text-center mt-5 text-white'>Hozircha hech qanday test mavjud emas</h2>")
+        return HttpResponse("<h2 class='text-center mt-5 text-white'>Hozircha hech qanday test yo'q</h2>")
 
     questions = test.questions.all()
 
     if request.method == "POST":
-        total = sum(grade_answer(request.POST.get(str(q.id), ""), q.correct_answer) for q in questions)
-        score = round(total / len(questions), 2) if questions else 0
-        Result.objects.create(test=test, user=request.user, score=score)
+        total_score = 0
+        for q in questions:
+            student_ans = request.POST.get(str(q.id), "").strip()
+            if q.question_type in ['mcq', 'truefalse']:
+                # Yopiq savollar 100% aniqlik bilan baholanadi
+                if student_ans.lower() == q.correct_answer.lower():
+                    total_score += 100
+            else:
+                # Ochiq savollar NLP bilan baholanadi
+                total_score += grade_answer(student_ans, q.correct_answer)
+
+        final_score = round(total_score / len(questions), 2)
+        Result.objects.create(test=test, user=request.user, score=final_score)
 
         return HttpResponse(f"""
-        <div class="container mt-5 text-center text-white">
-            <div class="card p-5 bg-dark mx-auto" style="max-width: 600px;">
-                <h1 class="display-4 text-success">🎉 Natijangiz: <b>{score}%</b></h1>
+        <div class="container mt-5 text-center">
+            <div class="card p-5 bg-dark mx-auto" style="max-width: 650px;">
+                <h1 class="display-3 text-success">🎉 Natijangiz: {final_score}%</h1>
+                <p class="lead">Test yakunlandi. Natija avtomatik hisoblandi.</p>
                 <a href="/test/" class="btn btn-primary btn-lg mt-4">Yana topshirish</a>
-                <a href="/logout/" class="btn btn-outline-light btn-lg mt-4">Chiqish</a>
+                <a href="/logout/" class="btn btn-outline-light mt-4">Chiqish</a>
             </div>
         </div>
         """)
 
+    # Test sahifasi (Yopiq + Ochiq savollar bilan)
     html = f"""
     <!DOCTYPE html>
     <html lang="uz">
@@ -137,11 +139,12 @@ def take_test(request):
             <form method="post">
                 {''.join(f'''
                 <div class="card mb-4 p-4 bg-dark">
-                    <h5 class="mb-3">{q.text}</h5>
-                    <input name="{q.id}" class="form-control" placeholder="Javobingizni yozing..." required>
+                    <h5>{q.text}</h5>
+                    {"<p><small class='text-info'>Yopiq savol</small></p>" if q.question_type in ['mcq','truefalse'] else "<p><small class='text-warning'>Ochiq savol</small></p>"}
+                    <input name="{q.id}" class="form-control mt-3" placeholder="Javobingiz..." required>
                 </div>
                 ''' for q in questions)}
-                <button type="submit" class="btn btn-success btn-lg w-100 py-3">Natijani ko'rish</button>
+                <button type="submit" class="btn btn-success btn-lg w-100 py-3">Testni yakunlash va natijani ko'rish</button>
             </form>
         </div>
     </body>
@@ -150,7 +153,7 @@ def take_test(request):
     return HttpResponse(html)
 
 
-# ===================== TEST YARATISH =====================
+# ===================== O'QITUVCHI - TEST YARATISH =====================
 @csrf_exempt
 @login_required
 def create_test(request):
@@ -159,66 +162,14 @@ def create_test(request):
         if not title:
             return HttpResponse("Test nomi majburiy!")
 
-        test = Test.objects.create(title=title)
-        Question.objects.create(
-            test=test,
-            text=request.POST.get("question"),
-            correct_answer=request.POST.get("correct")
-        )
-        return HttpResponse(f"""
-        <h2>Test muvaffaqiyatli yaratildi: <b>{title}</b></h2>
-        <a href="/create/" class="btn btn-primary">Yana test yaratish</a>
-        <a href="/test/" class="btn btn-success">Testni ko'rish</a>
-        """)
+        test = Test.objects.create(title=title, teacher=request.user)
+        # Bu yerda bir nechta savol qo'shish mumkin (hozircha oddiy versiya)
+        return HttpResponse(f"Test yaratildi: <b>{title}</b><br><a href='/create/'>Yana yaratish</a>")
 
     return HttpResponse("""
-    <!DOCTYPE html>
-    <html lang="uz">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Test yaratish</title>
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>body { background: #0f172a; color: white; }</style>
-    </head>
-    <body>
-        <div class="container mt-5">
-            <h2 class="text-center">Yangi test yaratish</h2>
-            <form method="post" class="card p-4 bg-dark mt-4">
-                <div class="mb-3"><input name="title" class="form-control" placeholder="Test nomi" required></div>
-                <div class="mb-3"><input name="question" class="form-control" placeholder="Savol matni" required></div>
-                <div class="mb-3"><input name="correct" class="form-control" placeholder="To'g'ri javob" required></div>
-                <button type="submit" class="btn btn-primary w-100">Testni saqlash</button>
-            </form>
-        </div>
-    </body>
-    </html>
+    <h2>Test yaratish</h2>
+    <form method="post">
+        <input name="title" placeholder="Test nomi" required><br><br>
+        <button type="submit">Testni yaratish</button>
+    </form>
     """)
-
-
-# Qolgan oddiy sahifalar
-def logout_view(request):
-    logout(request)
-    return redirect("/login/")
-
-@login_required
-def admin_panel(request):
-    return HttpResponse("<h2>Admin Panel</h2><p><a href='/users/'>Foydalanuvchilar</a></p>")
-
-def create_admin(request):
-    if not CustomUser.objects.filter(username="admin").exists():
-        CustomUser.objects.create_superuser(username="admin", password="1234", role="admin")
-        return HttpResponse("Admin yaratildi!<br>Username: admin<br>Password: 1234")
-    return HttpResponse("Admin allaqachon mavjud")
-
-@login_required
-def users_list(request):
-    return HttpResponse("<h2>Foydalanuvchilar ro'yxati (keyinroq to'liq qilamiz)</h2>")
-
-@login_required
-def results_list(request):
-    return HttpResponse("<h2>Natijalar (keyinroq to'liq qilamiz)</h2>")
-
-@login_required
-def stats_view(request):
-    return HttpResponse("<h2>Statistika (keyinroq Chart.js bilan qilamiz)</h2>")

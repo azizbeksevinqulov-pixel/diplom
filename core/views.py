@@ -16,6 +16,9 @@ def register_view(request):
         password = request.POST.get("password")
         role = request.POST.get("role", "student")
 
+        if not username or not password:
+            return HttpResponse("Username va parol majburiy!")
+
         if CustomUser.objects.filter(username=username).exists():
             return HttpResponse("Bu username allaqachon mavjud!")
 
@@ -26,7 +29,8 @@ def register_view(request):
     <!DOCTYPE html>
     <html lang="uz">
     <head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Ro'yxatdan o'tish</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>body { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }</style>
@@ -66,7 +70,8 @@ def login_view(request):
     <!DOCTYPE html>
     <html lang="uz">
     <head>
-        <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Kirish</title>
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <style>body { background: linear-gradient(135deg, #0f172a, #1e2937); color: white; min-height: 100vh; display: flex; align-items: center; justify-content: center; }</style>
@@ -86,13 +91,19 @@ def login_view(request):
     """)
 
 
-# ===================== TALABA - TEST TOPSHIRISH (Asosiy imtihon bo'limi) =====================
+# ===================== LOGOUT =====================
+def logout_view(request):
+    logout(request)
+    return redirect("/login/")
+
+
+# ===================== TEST TOPSHIRISH (Asosiy imtihon bo'limi) =====================
 @csrf_exempt
 @login_required
 def take_test(request):
     test = Test.objects.last()
     if not test:
-        return HttpResponse("<h2 class='text-center mt-5 text-white'>Hozircha hech qanday test yo'q</h2>")
+        return HttpResponse("<h2 class='text-center mt-5 text-white'>Hozircha test mavjud emas</h2>")
 
     questions = test.questions.all()
 
@@ -101,11 +112,9 @@ def take_test(request):
         for q in questions:
             student_ans = request.POST.get(str(q.id), "").strip()
             if q.question_type in ['mcq', 'truefalse']:
-                # Yopiq savollar 100% aniqlik bilan baholanadi
                 if student_ans.lower() == q.correct_answer.lower():
                     total_score += 100
             else:
-                # Ochiq savollar NLP bilan baholanadi
                 total_score += grade_answer(student_ans, q.correct_answer)
 
         final_score = round(total_score / len(questions), 2)
@@ -114,15 +123,13 @@ def take_test(request):
         return HttpResponse(f"""
         <div class="container mt-5 text-center">
             <div class="card p-5 bg-dark mx-auto" style="max-width: 650px;">
-                <h1 class="display-3 text-success">🎉 Natijangiz: {final_score}%</h1>
-                <p class="lead">Test yakunlandi. Natija avtomatik hisoblandi.</p>
+                <h1 class="display-3 text-success">Natijangiz: {final_score}%</h1>
                 <a href="/test/" class="btn btn-primary btn-lg mt-4">Yana topshirish</a>
                 <a href="/logout/" class="btn btn-outline-light mt-4">Chiqish</a>
             </div>
         </div>
         """)
 
-    # Test sahifasi (Yopiq + Ochiq savollar bilan)
     html = f"""
     <!DOCTYPE html>
     <html lang="uz">
@@ -140,11 +147,10 @@ def take_test(request):
                 {''.join(f'''
                 <div class="card mb-4 p-4 bg-dark">
                     <h5>{q.text}</h5>
-                    {"<p><small class='text-info'>Yopiq savol</small></p>" if q.question_type in ['mcq','truefalse'] else "<p><small class='text-warning'>Ochiq savol</small></p>"}
                     <input name="{q.id}" class="form-control mt-3" placeholder="Javobingiz..." required>
                 </div>
                 ''' for q in questions)}
-                <button type="submit" class="btn btn-success btn-lg w-100 py-3">Testni yakunlash va natijani ko'rish</button>
+                <button type="submit" class="btn btn-success btn-lg w-100">Natijani ko'rish</button>
             </form>
         </div>
     </body>
@@ -153,7 +159,7 @@ def take_test(request):
     return HttpResponse(html)
 
 
-# ===================== O'QITUVCHI - TEST YARATISH =====================
+# ===================== TEST YARATISH =====================
 @csrf_exempt
 @login_required
 def create_test(request):
@@ -161,15 +167,37 @@ def create_test(request):
         title = request.POST.get("title")
         if not title:
             return HttpResponse("Test nomi majburiy!")
-
-        test = Test.objects.create(title=title, teacher=request.user)
-        # Bu yerda bir nechta savol qo'shish mumkin (hozircha oddiy versiya)
-        return HttpResponse(f"Test yaratildi: <b>{title}</b><br><a href='/create/'>Yana yaratish</a>")
+        Test.objects.create(title=title, teacher=request.user)
+        return HttpResponse(f"Test yaratildi: {title} ✅ <br><a href='/create/'>Yana yaratish</a>")
 
     return HttpResponse("""
     <h2>Test yaratish</h2>
     <form method="post">
         <input name="title" placeholder="Test nomi" required><br><br>
-        <button type="submit">Testni yaratish</button>
+        <button type="submit">Yaratish</button>
     </form>
     """)
+
+
+# ===================== QOLGAN SAHIFALAR =====================
+@login_required
+def admin_panel(request):
+    return HttpResponse("<h2>Admin Panel</h2>")
+
+def create_admin(request):
+    if not CustomUser.objects.filter(username="admin").exists():
+        CustomUser.objects.create_superuser(username="admin", password="1234", role="admin")
+        return HttpResponse("Admin yaratildi!<br>Login: admin<br>Parol: 1234")
+    return HttpResponse("Admin allaqachon mavjud")
+
+@login_required
+def users_list(request):
+    return HttpResponse("<h2>Foydalanuvchilar</h2>")
+
+@login_required
+def results_list(request):
+    return HttpResponse("<h2>Natijalar</h2>")
+
+@login_required
+def stats_view(request):
+    return HttpResponse("<h2>Statistika</h2>")

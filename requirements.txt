@@ -1,0 +1,5 @@
+Django==5.0
+gunicorn
+scikit-learn
+whitenoise
+psycopg2-binary

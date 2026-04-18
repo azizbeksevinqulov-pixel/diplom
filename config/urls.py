@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path
 from core.views import (
     register_view, login_view, logout_view,
-    admin_panel, create_test, take_test,
+    create_test, take_test, admin_panel, 
     users_list, results_list, stats_view, create_admin
 )
 

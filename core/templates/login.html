@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+{% block title %}Kirish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card p-5 shadow">
+            <h2 class="text-center mb-4">🔑 Tizimga kirish</h2>
+            <form method="post">
+                <div class="mb-3"><input name="username" class="form-control form-control-lg" placeholder="Username" required></div>
+                <div class="mb-3"><input name="password" type="password" class="form-control form-control-lg" placeholder="Parol" required></div>
+                <button type="submit" class="btn btn-success w-100 btn-lg">Kirish</button>
+            </form>
+            <p class="text-center mt-4">
+                <a href="/register/" class="text-info">Ro'yxatdan o'tish</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

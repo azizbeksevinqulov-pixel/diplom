@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block title %}Ro'yxatdan o'tish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card p-5 shadow">
+            <h2 class="text-center mb-4">🎓 Ro'yxatdan o'tish</h2>
+            <form method="post">
+                <div class="mb-3"><input name="username" class="form-control form-control-lg" placeholder="Username" required></div>
+                <div class="mb-3"><input name="password" type="password" class="form-control form-control-lg" placeholder="Parol" required></div>
+                <div class="mb-4">
+                    <select name="role" class="form-select form-select-lg">
+                        <option value="student">Talaba</option>
+                        <option value="teacher">O'qituvchi</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 btn-lg">Ro'yxatdan o'tish</button>
+            </form>
+            <p class="text-center mt-4">
+                <a href="/login/" class="text-info">Allaqachon akkaunt bormi? Kirish</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
